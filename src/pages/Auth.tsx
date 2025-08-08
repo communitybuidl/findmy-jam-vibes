@@ -4,7 +4,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { Chrome } from "lucide-react";
 
 const Auth = () => {
   const [isSignup, setIsSignup] = useState(false);
@@ -19,9 +21,36 @@ const Auth = () => {
   useEffect(() => {
     // If user is already logged in, redirect to discover
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/discover", { replace: true });
+      if (session) {
+        const backTo = params.get("redirect") || "/discover";
+        navigate(backTo, { replace: true });
+      }
     });
-  }, [navigate]);
+
+    // Handle OAuth callback
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Check if profile exists and is complete
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, role, genres')
+            .eq('user_id', session.user.id)
+            .single();
+
+          // If no profile or incomplete profile, go to setup
+          if (!profile || !profile.display_name || !profile.role || !profile.genres?.length) {
+            navigate('/profile-setup', { replace: true });
+          } else {
+            const backTo = params.get("redirect") || "/discover";
+            navigate(backTo, { replace: true });
+          }
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [navigate, params]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,9 +72,31 @@ const Auth = () => {
         const backTo = params.get("redirect") || "/discover";
         navigate(backTo, { replace: true });
       }
-    } catch (err: any) {
+    } catch (err: Error) {
       setError(err?.message || "Something went wrong");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const backTo = params.get("redirect") || "/discover";
+      // Use the auth callback route for proper OAuth handling
+      const redirectUrl = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(backTo)}`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+      
+      if (error) throw error;
+    } catch (err: Error) {
+      setError(err?.message || "Something went wrong");
       setLoading(false);
     }
   };
@@ -63,6 +114,25 @@ const Auth = () => {
           <div className="container mx-auto px-4 max-w-md">
             <h1 className="text-3xl font-bold mb-6 text-center">{isSignup ? "Sign up" : "Log in"}</h1>
             <div className="rounded-xl border border-border bg-card p-6 shadow-elegant">
+              {/* Google Login Button */}
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full mb-4" 
+                onClick={handleGoogleLogin}
+                disabled={loading}
+              >
+                <Chrome className="h-4 w-4 mr-2" />
+                Continue with Google
+              </Button>
+              
+              <div className="relative mb-4">
+                <Separator />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                  or
+                </span>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>

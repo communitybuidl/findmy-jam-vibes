@@ -17,9 +17,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Subscribe FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
+      
+      // Only ensure profile exists (don't auto-complete it)
+      if (event === 'SIGNED_IN' && sess?.user) {
+        try {
+          // Check if profile already exists
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id, display_name')
+            .eq('user_id', sess.user.id)
+            .single();
+          
+          // Only create minimal profile if none exists
+          if (!existingProfile) {
+            await supabase.rpc('ensure_profile');
+          }
+        } catch (error) {
+          console.error('Error ensuring profile:', error);
+        }
+      }
     });
 
     // THEN get existing session
