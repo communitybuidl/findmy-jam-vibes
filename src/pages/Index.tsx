@@ -8,17 +8,18 @@ const Index = () => {
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <a href="#" className="font-bold text-lg tracking-tight">FindmyJam</a>
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features" className="hover:text-primary transition-colors">Features</a>
-            <a href="#how" className="hover:text-primary transition-colors">How it works</a>
-            <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
-          </nav>
+           <nav className="hidden md:flex items-center gap-6 text-sm">
+             <a href="#features" className="hover:text-primary transition-colors">Features</a>
+             <a href="#how" className="hover:text-primary transition-colors">How it works</a>
+             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
+             <a href="/auth" className="hover:text-primary transition-colors">Log in</a>
+           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" className="hidden md:inline-flex" asChild>
               <a href="#how">Learn more</a>
             </Button>
             <Button variant="hero" size="lg" asChild>
-              <a href="#get-started">Get started</a>
+              <a href="/discover">Get started</a>
             </Button>
           </div>
         </div>
@@ -36,7 +37,7 @@ const Index = () => {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="hero" size="xl" asChild>
-                  <a href="#get-started">Find my jam</a>
+                  <a href="/discover">Find my jam</a>
                 </Button>
                 <Button variant="secondary" size="xl" asChild>
                   <a href="#features">Explore features</a>
@@ -109,7 +110,9 @@ const Index = () => {
               </div>
             </div>
             <div id="get-started" className="mt-10 flex justify-center">
-              <Button variant="hero" size="lg">Start now</Button>
+              <Button variant="hero" size="lg" asChild>
+                <a href="/discover">Start now</a>
+              </Button>
             </div>
           </div>
         </section>
