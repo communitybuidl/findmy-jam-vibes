@@ -72,7 +72,7 @@ const Auth = () => {
         const backTo = params.get("redirect") || "/discover";
         navigate(backTo, { replace: true });
       }
-    } catch (err: Error) {
+    } catch (err: any) {
       setError(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -95,7 +95,7 @@ const Auth = () => {
       });
       
       if (error) throw error;
-    } catch (err: Error) {
+    } catch (err: any) {
       setError(err?.message || "Something went wrong");
       setLoading(false);
     }

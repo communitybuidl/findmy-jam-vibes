@@ -39,11 +39,43 @@ export const useMessages = (conversationPartnerId?: string) => {
 
       if (!profile) return [];
 
-      const { data, error } = await supabase
-        .rpc('get_user_conversations', { user_profile_id: profile.id });
+      // Get conversations by querying messages directly
+      const { data: messagesData, error } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          sender_id,
+          receiver_id,
+          content,
+          created_at,
+          sender:profiles!messages_sender_id_fkey(id, display_name, avatar_url),
+          receiver:profiles!messages_receiver_id_fkey(id, display_name, avatar_url)
+        `)
+        .or(`sender_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Group messages into conversations
+      const conversationsMap = new Map();
+      
+      messagesData?.forEach(message => {
+        const partnerId = message.sender_id === profile.id ? message.receiver_id : message.sender_id;
+        const partnerKey = [profile.id, partnerId].sort().join('-');
+        
+        if (!conversationsMap.has(partnerKey)) {
+          conversationsMap.set(partnerKey, {
+            user1_id: profile.id < partnerId ? profile.id : partnerId,
+            user2_id: profile.id < partnerId ? partnerId : profile.id,
+            last_message: message.content,
+            last_message_at: message.created_at,
+            last_message_sender_id: message.sender_id,
+            unread_count: 0
+          });
+        }
+      });
+      
+      return Array.from(conversationsMap.values());
     },
   });
 

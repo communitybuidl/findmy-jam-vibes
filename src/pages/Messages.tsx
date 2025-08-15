@@ -162,7 +162,7 @@ const Messages = () => {
               <CardContent>
                 {conversationsLoading ? (
                   <p className="text-muted-foreground text-center py-4">Loading...</p>
-                ) : conversations && conversations.length > 0 ? (
+                ) : Array.isArray(conversations) && conversations.length > 0 ? (
                   <div className="space-y-2">
                     {conversations.map((conversation) => {
                       const isUser1 = conversation.user1_id === currentProfile.id;

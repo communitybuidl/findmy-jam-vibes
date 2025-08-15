@@ -4,13 +4,11 @@ import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { X, Plus, ExternalLink, ArrowLeft } from 'lucide-react';
+import { X, Plus, ArrowLeft, MapPin, CheckCircle } from 'lucide-react';
 
 const GENRES = [
   'rock', 'jazz', 'blues', 'pop', 'hip-hop', 'r&b', 'country', 'folk', 
@@ -39,6 +37,63 @@ const ProfileSetup = () => {
   const [country, setCountry] = useState('');
   const [portfolioLinks, setPortfolioLinks] = useState<Array<{service: string, url: string, display_name: string}>>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Auto-detect location
+  const detectLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Location not supported',
+        description: 'Your browser doesn\'t support location detection.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLocationLoading(true);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          
+          // Use reverse geocoding service
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            setCity(data.city || data.locality || '');
+            setCountry(data.countryName || '');
+            setLocation(data.principalSubdivision || data.region || '');
+            
+            toast({
+              title: 'Location detected!',
+              description: `${data.city || data.locality}, ${data.countryName}`,
+            });
+          }
+        } catch (error) {
+          toast({
+            title: 'Location detection failed',
+            description: 'Could not detect your location. You can enter it manually.',
+            variant: 'destructive'
+          });
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      () => {
+        setLocationLoading(false);
+        toast({
+          title: 'Location permission denied',
+          description: 'Please allow location access or enter your location manually.',
+          variant: 'destructive'
+        });
+      }
+    );
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -68,15 +123,16 @@ const ProfileSetup = () => {
         .from('profiles')
         .select('id, display_name, role, genres, location, city, country')
         .eq('user_id', data.session.user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.log('ProfileSetup: No existing profile or error:', error.message);
-      } else {
+      if (error && error.code !== 'PGRST116') {
+        console.log('ProfileSetup: Error fetching profile:', error.message);
+        // Continue anyway, might be first time setup
+      } else if (profile) {
         console.log('ProfileSetup: Existing profile:', profile);
         
         // Pre-populate form with existing data when editing
-        if (profile && isEditing) {
+        if (isEditing) {
           setDisplayName(profile.display_name || name);
           setRole(profile.role || '');
           setSelectedGenres(profile.genres || []);
@@ -84,26 +140,32 @@ const ProfileSetup = () => {
           setCity(profile.city || '');
           setCountry(profile.country || '');
         }
-      }
 
-      // Only redirect if profile is complete AND we're not in edit mode
-      if (profile && profile.display_name && profile.role && profile.genres?.length && !isEditing) {
-        console.log('ProfileSetup: Profile complete, redirecting to discover');
-        navigate('/discover');
-      } else {
-        console.log('ProfileSetup: Staying on setup page');
-      }
-
-      // Load portfolio links if we have a profile
-      if (profile?.id) {
-        const { data: musicLinks } = await supabase
-          .from('music_links')
-          .select('service, url, display_name')
-          .eq('profile_id', profile.id);
-        
-        if (musicLinks) {
-          setPortfolioLinks(musicLinks);
+        // Load portfolio links if we have a profile
+        if (profile?.id) {
+          const { data: musicLinks } = await supabase
+            .from('music_links')
+            .select('service, url, display_name')
+            .eq('profile_id', profile.id);
+          
+          if (musicLinks) {
+            setPortfolioLinks(musicLinks);
+          }
         }
+
+        // Only redirect if profile is complete AND we're not in edit mode
+        if (profile.display_name && profile.role && profile.genres?.length && !isEditing) {
+          console.log('ProfileSetup: Profile complete, redirecting to discover');
+          navigate('/discover');
+          return;
+        }
+      }
+
+      console.log('ProfileSetup: Staying on setup page');
+      
+      // Auto-detect location if not set
+      if (!isEditing && (!city || !country)) {
+        detectLocation();
       }
     };
 
@@ -152,7 +214,7 @@ const ProfileSetup = () => {
     
     if (!displayName.trim() || !finalRole || selectedGenres.length === 0) {
       toast({
-        title: 'Please fill in all fields',
+        title: 'Please fill in all required fields',
         description: 'Display name, role, and at least one genre are required.',
         variant: 'destructive',
       });
@@ -174,33 +236,32 @@ const ProfileSetup = () => {
       console.log('Updating profile for user:', currentUser.id);
       console.log('Profile data:', { displayName, finalRole, selectedGenres, portfolioLinks });
 
-      // First, ensure profile exists
-      await supabase.rpc('ensure_profile');
-
-      // Then update the profile
+      // First, upsert the profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          user_id: currentUser.id,
           display_name: displayName.trim(),
           role: finalRole,
           genres: selectedGenres,
           location: location.trim() || null,
           city: city.trim() || null,
           country: country.trim() || null,
+        }, {
+          onConflict: 'user_id'
         })
-        .eq('user_id', currentUser.id)
         .select()
         .single();
 
       if (profileError) {
-        console.error('Profile update error:', profileError);
+        console.error('Profile upsert error:', profileError);
         throw profileError;
       }
 
       console.log('Profile updated successfully:', profileData);
 
       // Update music links
-      if (portfolioLinks.length > 0) {
+      if (portfolioLinks.length > 0 && profileData?.id) {
         // First delete existing links
         await supabase
           .from('music_links')
@@ -231,15 +292,13 @@ const ProfileSetup = () => {
         }
       }
 
-      toast({
-        title: isEditing ? 'Profile updated!' : 'Profile created!',
-        description: isEditing ? 'Your profile has been updated successfully.' : 'Welcome to FindmyJam! Start discovering musicians.',
-      });
-
-      // Small delay to ensure the toast is seen
+      // Show success state
+      setShowSuccess(true);
+      
+      // Navigate after showing success message
       setTimeout(() => {
         navigate('/discover');
-      }, 1000);
+      }, 2000);
 
     } catch (error: any) {
       console.error('Profile creation error:', error);
@@ -252,6 +311,25 @@ const ProfileSetup = () => {
       setLoading(false);
     }
   };
+
+  if (showSuccess) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-center">
+          <CheckCircle className="h-16 w-16 text-primary mx-auto mb-4" />
+          <h1 className="text-3xl font-bold mb-2">Profile Created!</h1>
+          <p className="text-muted-foreground text-lg">
+            You're ready to meet other musicians to jam with!
+          </p>
+          <div className="mt-4">
+            <div className="animate-pulse text-sm text-muted-foreground">
+              Redirecting to discover page...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -291,18 +369,28 @@ const ProfileSetup = () => {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="displayName">Display Name *</Label>
+                    <Label htmlFor="displayName">
+                      Display Name <span className="text-destructive">*</span>
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      How do you want other musicians to call you? You can change this anytime.
+                    </p>
                     <Input
                       id="displayName"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="How you want to be known"
+                      placeholder="Your stage name or real name"
                       required
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="role">Primary Role *</Label>
+                    <Label htmlFor="role">
+                      Primary Role <span className="text-destructive">*</span>
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      What's your main musician role?
+                    </p>
                     <Select value={role} onValueChange={handleRoleSelect} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select your primary role" />
@@ -328,7 +416,12 @@ const ProfileSetup = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Genres * (select all that apply)</Label>
+                    <Label>
+                      Music Genres <span className="text-destructive">*</span>
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      You can select as many as you want - this helps you find musicians with similar tastes!
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {GENRES.map((genre) => (
                         <button
@@ -376,7 +469,23 @@ const ProfileSetup = () => {
 
                   {/* Location Section */}
                   <div className="space-y-3">
-                    <Label>Location (Optional)</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Location (Optional)</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={detectLocation}
+                        disabled={locationLoading}
+                        className="flex items-center gap-2"
+                      >
+                        <MapPin className="h-4 w-4" />
+                        {locationLoading ? 'Detecting...' : 'Auto-detect'}
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Help other musicians find you nearby. We can auto-detect your location or you can enter it manually.
+                    </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
                         <Label htmlFor="city" className="text-sm text-muted-foreground">City</Label>
@@ -406,9 +515,6 @@ const ProfileSetup = () => {
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      💡 Adding your location helps other musicians find you nearby
-                    </p>
                   </div>
 
                   {/* Portfolio Links Section */}
@@ -426,6 +532,9 @@ const ProfileSetup = () => {
                         Add Link
                       </Button>
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      Share your music, social profiles, or portfolio to give others a taste of your style.
+                    </p>
                     
                     {portfolioLinks.map((link, index) => (
                       <div key={index} className="flex gap-2 items-end">
@@ -468,16 +577,14 @@ const ProfileSetup = () => {
                         </Button>
                       </div>
                     ))}
-                    
-                    {portfolioLinks.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        💡 These links will be clickable on your profile and open in new tabs
-                      </p>
-                    )}
                   </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (isEditing ? 'Updating profile...' : 'Creating profile...') : (isEditing ? 'Update profile' : 'Complete setup')}
+                    {loading ? (
+                      isEditing ? 'Updating profile...' : 'Creating profile...'
+                    ) : (
+                      isEditing ? 'Update profile' : 'Complete setup & find musicians!'
+                    )}
                   </Button>
                 </form>
               </CardContent>
