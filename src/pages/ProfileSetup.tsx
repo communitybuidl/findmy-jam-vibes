@@ -52,13 +52,75 @@ const ProfileSetup = () => {
     }
 
     setLocationLoading(true);
-    
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
+
+    try {
+      // Check permission status first
+      if ('permissions' in navigator) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        
+        if (permission.state === 'denied') {
+          setLocationLoading(false);
+          toast({
+            title: 'Location permission denied',
+            description: 'Please enable location access in your browser settings, then try again.',
+            variant: 'destructive'
+          });
+          return;
+        }
+      }
+
+      // Try geolocation with different accuracy settings
+      const tryGetPosition = (highAccuracy = false) => {
+        return new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            reject,
+            {
+              enableHighAccuracy: highAccuracy,
+              timeout: highAccuracy ? 15000 : 10000,
+              maximumAge: highAccuracy ? 300000 : 600000
+            }
+          );
+        });
+      };
+
+      // First try with low accuracy (faster, more reliable)
+      try {
+        console.log('Trying geolocation with low accuracy...');
+        const position = await tryGetPosition(false);
+        
+        const { latitude, longitude } = position.coords;
+        console.log('Got coordinates:', latitude, longitude);
+        
+        // Use reverse geocoding service
+        const response = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCity(data.city || data.locality || '');
+          setCountry(data.countryName || '');
+          setLocation(data.principalSubdivision || data.region || '');
           
-          // Use reverse geocoding service
+          setLocationLoading(false);
+          toast({
+            title: 'Location detected!',
+            description: `${data.city || data.locality}, ${data.countryName}`,
+          });
+          return;
+        }
+      } catch (lowAccuracyError) {
+        console.log('Low accuracy geolocation failed, trying high accuracy...', lowAccuracyError);
+        
+        // Try with high accuracy as backup
+        try {
+          console.log('Trying geolocation with high accuracy...');
+          const position = await tryGetPosition(true);
+          
+          const { latitude, longitude } = position.coords;
+          console.log('Got coordinates (high accuracy):', latitude, longitude);
+          
           const response = await fetch(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
           );
@@ -69,30 +131,85 @@ const ProfileSetup = () => {
             setCountry(data.countryName || '');
             setLocation(data.principalSubdivision || data.region || '');
             
+            setLocationLoading(false);
             toast({
               title: 'Location detected!',
               description: `${data.city || data.locality}, ${data.countryName}`,
             });
+            return;
           }
-        } catch (error) {
+        } catch (highAccuracyError) {
+          console.error('Both geolocation attempts failed:', highAccuracyError);
+          
+          // Fall back to IP-based location
+          console.log('Trying IP-based location fallback...');
+          try {
+            const response = await fetch('https://ipapi.co/json/');
+            if (response.ok) {
+              const ipData = await response.json();
+              console.log('IP location data:', ipData);
+              
+              if (ipData.city && ipData.country_name) {
+                setCity(ipData.city);
+                setCountry(ipData.country_name);
+                setLocation(ipData.region || '');
+                
+                setLocationLoading(false);
+                toast({
+                  title: 'Location detected via IP',
+                  description: `${ipData.city}, ${ipData.country_name} (approximate location)`,
+                });
+                return;
+              }
+            } else {
+              console.log('IP API response not ok:', response.status);
+            }
+          } catch (ipError) {
+            console.log('IP location fallback failed:', ipError);
+            
+            // Try alternative IP service
+            try {
+              console.log('Trying alternative IP service...');
+              const altResponse = await fetch('http://ip-api.com/json/');
+              if (altResponse.ok) {
+                const altData = await altResponse.json();
+                console.log('Alternative IP data:', altData);
+                
+                if (altData.city && altData.country) {
+                  setCity(altData.city);
+                  setCountry(altData.country);
+                  setLocation(altData.regionName || '');
+                  
+                  setLocationLoading(false);
+                  toast({
+                    title: 'Location detected via IP',
+                    description: `${altData.city}, ${altData.country} (approximate location)`,
+                  });
+                  return;
+                }
+              }
+            } catch (altError) {
+              console.log('Alternative IP service failed:', altError);
+            }
+          }
+          
+          // If everything fails
+          setLocationLoading(false);
           toast({
             title: 'Location detection failed',
-            description: 'Could not detect your location. You can enter it manually.',
+            description: 'Unable to detect your location. Please enter it manually below.',
             variant: 'destructive'
           });
-        } finally {
-          setLocationLoading(false);
         }
-      },
-      () => {
-        setLocationLoading(false);
-        toast({
-          title: 'Location permission denied',
-          description: 'Please allow location access or enter your location manually.',
-          variant: 'destructive'
-        });
       }
-    );
+    } catch (error) {
+      setLocationLoading(false);
+      toast({
+        title: 'Location detection error',
+        description: 'Unable to check location permissions. Please enter your location manually.',
+        variant: 'destructive'
+      });
+    }
   };
 
   useEffect(() => {
@@ -453,7 +570,7 @@ const ProfileSetup = () => {
                         placeholder="Add custom genre"
                         value={customGenre}
                         onChange={(e) => setCustomGenre(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomGenre())}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomGenre())}
                         className="flex-1"
                       />
                       <Button
