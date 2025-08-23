@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useConnections } from "@/hooks/useConnections";
 import { Users, MessageCircle, LogOut, Home, User, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProfileRow {
   id: string;
@@ -35,8 +36,9 @@ const Discover = () => {
   const canonical = useMemo(() => (typeof window !== "undefined" ? window.location.href : ""), []);
   const { sendConnectionRequest, connections } = useConnections();
   const [currentProfile, setCurrentProfile] = useState<{ id: string } | null>(null);
+  const { session, loading: authLoading } = useAuth();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["profiles"],
     queryFn: async (): Promise<ProfileRow[]> => {
       const { data, error } = await supabase
@@ -58,22 +60,32 @@ const Discover = () => {
       console.log('Fetched profiles with music_links:', data);
       return data as unknown as ProfileRow[];
     },
+    retry: 3,
+    retryDelay: 1000,
   });
 
   useEffect(() => {
     const getCurrentProfile = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', session.session.user.id)
-          .single();
-        setCurrentProfile(profile);
+      if (session?.user) {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          if (!error && profile) {
+            setCurrentProfile(profile);
+          }
+        } catch (error) {
+          console.error('Error fetching current profile:', error);
+        }
+      } else {
+        setCurrentProfile(null);
       }
     };
     getCurrentProfile();
-  }, []);
+  }, [session]);
 
   const filtered = (data || []).filter((p) => {
     const q = search.trim().toLowerCase();
@@ -156,7 +168,7 @@ const Discover = () => {
       </Helmet>
 
       {/* Navigation Header */}
-      {currentProfile && (
+      {!authLoading && session && (
         <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto flex h-16 items-center justify-between px-4">
             <div className="flex items-center gap-4">
@@ -244,6 +256,13 @@ const Discover = () => {
 
             {isLoading ? (
               <p className="text-muted-foreground">Loading profiles…</p>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-destructive mb-4">Failed to load profiles. Please try again.</p>
+                <Button variant="outline" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-3">
                 {filtered.map((p) => (
