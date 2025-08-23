@@ -87,8 +87,10 @@ const Auth = () => {
     setError(null);
     try {
       const backTo = params.get("redirect") || "/discover";
-      // Use the auth callback route for proper OAuth handling
+      
+      // Always use current origin for redirect URL
       const redirectUrl = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(backTo)}`;
+      
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -134,6 +136,7 @@ const Auth = () => {
                 <Chrome className="h-4 w-4 mr-2" />
                 {t('continueWithGoogle')}
               </Button>
+              
               
               <div className="relative mb-4">
                 <Separator />

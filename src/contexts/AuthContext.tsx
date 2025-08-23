@@ -16,10 +16,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    
     // Subscribe FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
+      if (!mounted) return;
+      
       setSession(sess);
       setUser(sess?.user ?? null);
+      setLoading(false); // Set loading to false on any auth state change
       
       // Only ensure profile exists (don't auto-complete it)
       if (event === 'SIGNED_IN' && sess?.user) {
@@ -43,12 +48,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // THEN get existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

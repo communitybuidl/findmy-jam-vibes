@@ -13,12 +13,12 @@ const Index = () => {
   const { t } = useTranslation();
   const { session, loading: authLoading } = useAuth();
 
-  useEffect(() => {
-    // Only redirect if we're sure about auth state (not loading) and user is authenticated
-    if (!authLoading && session) {
-      navigate('/discover');
-    }
-  }, [navigate, session, authLoading]);
+  // Remove automatic redirect - let users access homepage when logged in
+  // useEffect(() => {
+  //   if (!authLoading && session) {
+  //     navigate('/discover');
+  //   }
+  // }, [navigate, session, authLoading]);
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,16 +28,24 @@ const Index = () => {
              <a href="#features" className="hover:text-primary transition-colors">{t('features')}</a>
              <a href="#how" className="hover:text-primary transition-colors">{t('howItWorks')}</a>
              <a href="#faq" className="hover:text-primary transition-colors">{t('faq')}</a>
-             <a href="/auth" className="hover:text-primary transition-colors">{t('login')}</a>
+             {!session && <a href="/auth" className="hover:text-primary transition-colors">{t('login')}</a>}
            </nav>
           <div className="flex items-center gap-2">
             <LanguageSwitch />
-            <Button variant="ghost" className="hidden md:inline-flex" asChild>
-              <a href="#how">{t('learnMore')}</a>
-            </Button>
-            <Button variant="hero" size="lg" onClick={() => navigate('/discover')}>
-              {t('getStarted')}
-            </Button>
+            {!session && (
+              <Button variant="ghost" className="hidden md:inline-flex" asChild>
+                <a href="#how">{t('learnMore')}</a>
+              </Button>
+            )}
+            {session ? (
+              <Button variant="hero" size="lg" onClick={() => navigate('/discover')}>
+                Go to Discover
+              </Button>
+            ) : (
+              <Button variant="hero" size="lg" onClick={() => navigate('/discover')}>
+                {t('getStarted')}
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -54,11 +62,18 @@ const Index = () => {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="hero" size="xl" onClick={() => navigate('/discover')}>
-                  {t('findMyJam')}
+                  {session ? 'Continue to Discover' : t('findMyJam')}
                 </Button>
-                <Button variant="secondary" size="xl" asChild>
-                  <a href="#features">{t('exploreFeatures')}</a>
-                </Button>
+                {session && (
+                  <Button variant="secondary" size="xl" onClick={() => navigate('/connections')}>
+                    View Connections
+                  </Button>
+                )}
+                {!session && (
+                  <Button variant="secondary" size="xl" asChild>
+                    <a href="#features">{t('exploreFeatures')}</a>
+                  </Button>
+                )}
               </div>
               <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="opacity-70" />
@@ -71,7 +86,7 @@ const Index = () => {
                 alt="Abstract vibrant music waveforms representing FindmyJam matching"
                 className="w-full rounded-xl border border-border shadow-elegant"
                 loading="eager"
-                fetchPriority="high"
+                fetchpriority="high"
               />
             </div>
           </div>

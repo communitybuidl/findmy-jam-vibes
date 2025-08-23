@@ -37,33 +37,52 @@ const Discover = () => {
   const { sendConnectionRequest, connections } = useConnections();
   const [currentProfile, setCurrentProfile] = useState<{ id: string } | null>(null);
   const { session, loading: authLoading } = useAuth();
+  
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["profiles", session?.user?.id || "anonymous"],
-    queryFn: async (): Promise<ProfileRow[]> => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(`
-          id, 
-          display_name, 
-          avatar_url, 
-          genres, 
-          role,
-          location,
-          city,
-          country,
-          music_links(service, url, display_name)
-        `)
-        .limit(60);
-      if (error) throw error;
+  // Direct fetch for profiles data
+  const [data, setData] = useState<ProfileRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      setIsLoading(true);
+      setError(null);
       
-      console.log('Fetched profiles with music_links:', data);
-      return data as unknown as ProfileRow[];
-    },
-    retry: 3,
-    retryDelay: 1000,
-    enabled: !authLoading, // Only run query when auth state is loaded
-  });
+      try {
+        const { data: profiles, error: profileError } = await supabase
+          .from("profiles")
+          .select(`
+            id, 
+            display_name, 
+            avatar_url, 
+            genres, 
+            role,
+            location,
+            city,
+            country,
+            music_links(service, url, display_name)
+          `)
+          .limit(60);
+        
+        if (profileError) {
+          setError(profileError);
+        } else {
+          setData(profiles || []);
+        }
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProfiles();
+  }, []);
+  
+  const refetch = () => {
+    // Could implement refetch logic here if needed
+  };
 
   useEffect(() => {
     const getCurrentProfile = async () => {
@@ -79,7 +98,7 @@ const Discover = () => {
             setCurrentProfile(profile);
           }
         } catch (error) {
-          console.error('Error fetching current profile:', error);
+          // Silently handle profile fetch errors
         }
       } else {
         setCurrentProfile(null);
@@ -169,17 +188,14 @@ const Discover = () => {
       </Helmet>
 
       {/* Navigation Header */}
-      {!authLoading && session && (
+      {!authLoading && (
         <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto flex h-16 items-center justify-between px-4">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate('/');
-                }}
+                onClick={() => navigate('/')}
                 className="flex items-center gap-2"
               >
                 <Home className="h-4 w-4" />
@@ -189,42 +205,65 @@ const Discover = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/connections')}
-                className="flex items-center gap-2"
-              >
-                <Users className="h-4 w-4" />
-                Connections
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/messages')}
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Messages
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/profile-setup?edit=true')}
-                className="flex items-center gap-2"
-              >
-                <User className="h-4 w-4" />
-                Profile
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-destructive hover:text-destructive"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
+              {session ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/connections')}
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="h-4 w-4" />
+                    Connections
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/messages')}
+                    className="flex items-center gap-2"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Messages
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/profile-setup?edit=true')}
+                    className="flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 text-destructive hover:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/auth')}
+                    className="flex items-center gap-2"
+                  >
+                    Log In
+                  </Button>
+                  <Button
+                    variant="hero"
+                    size="sm"
+                    onClick={() => navigate('/auth')}
+                    className="flex items-center gap-2"
+                  >
+                    Sign Up
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </header>
