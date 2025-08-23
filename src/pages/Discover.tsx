@@ -39,7 +39,7 @@ const Discover = () => {
   const { session, loading: authLoading } = useAuth();
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["profiles"],
+    queryKey: ["profiles", session?.user?.id || "anonymous"],
     queryFn: async (): Promise<ProfileRow[]> => {
       const { data, error } = await supabase
         .from("profiles")
@@ -62,6 +62,7 @@ const Discover = () => {
     },
     retry: 3,
     retryDelay: 1000,
+    enabled: !authLoading, // Only run query when auth state is loaded
   });
 
   useEffect(() => {
@@ -175,7 +176,10 @@ const Discover = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/');
+                }}
                 className="flex items-center gap-2"
               >
                 <Home className="h-4 w-4" />
@@ -254,7 +258,9 @@ const Discover = () => {
               </div>
             </div>
 
-            {isLoading ? (
+            {authLoading ? (
+              <p className="text-muted-foreground">Initializing…</p>
+            ) : isLoading ? (
               <p className="text-muted-foreground">Loading profiles…</p>
             ) : error ? (
               <div className="text-center py-8">

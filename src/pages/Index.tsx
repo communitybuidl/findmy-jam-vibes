@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -10,18 +11,14 @@ import { LanguageSwitch } from "@/components/LanguageSwitch";
 const Index = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { session, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // Check if user is authenticated and redirect to discover
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        navigate('/discover');
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
+    // Only redirect if we're sure about auth state (not loading) and user is authenticated
+    if (!authLoading && session) {
+      navigate('/discover');
+    }
+  }, [navigate, session, authLoading]);
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 w-full border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,8 +35,8 @@ const Index = () => {
             <Button variant="ghost" className="hidden md:inline-flex" asChild>
               <a href="#how">{t('learnMore')}</a>
             </Button>
-            <Button variant="hero" size="lg" asChild>
-              <a href="/discover">{t('getStarted')}</a>
+            <Button variant="hero" size="lg" onClick={() => navigate('/discover')}>
+              {t('getStarted')}
             </Button>
           </div>
         </div>
@@ -56,8 +53,8 @@ const Index = () => {
                 {t('landingSubtitle')}
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button variant="hero" size="xl" asChild>
-                  <a href="/discover">{t('findMyJam')}</a>
+                <Button variant="hero" size="xl" onClick={() => navigate('/discover')}>
+                  {t('findMyJam')}
                 </Button>
                 <Button variant="secondary" size="xl" asChild>
                   <a href="#features">{t('exploreFeatures')}</a>
@@ -130,8 +127,8 @@ const Index = () => {
               </div>
             </div>
             <div id="get-started" className="mt-10 flex justify-center">
-              <Button variant="hero" size="lg" asChild>
-                <a href="/discover">{t('startNow')}</a>
+              <Button variant="hero" size="lg" onClick={() => navigate('/discover')}>
+                {t('startNow')}
               </Button>
             </div>
           </div>
