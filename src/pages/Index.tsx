@@ -1,12 +1,15 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Music2, Users, CalendarDays, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { LanguageSwitch } from "@/components/LanguageSwitch";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Check if user is authenticated and redirect to discover
@@ -25,17 +28,18 @@ const Index = () => {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <a href="#" className="font-bold text-lg tracking-tight">FindmyJam</a>
            <nav className="hidden md:flex items-center gap-6 text-sm">
-             <a href="#features" className="hover:text-primary transition-colors">Features</a>
-             <a href="#how" className="hover:text-primary transition-colors">How it works</a>
-             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
-             <a href="/auth" className="hover:text-primary transition-colors">Log in</a>
+             <a href="#features" className="hover:text-primary transition-colors">{t('features')}</a>
+             <a href="#how" className="hover:text-primary transition-colors">{t('howItWorks')}</a>
+             <a href="#faq" className="hover:text-primary transition-colors">{t('faq')}</a>
+             <a href="/auth" className="hover:text-primary transition-colors">{t('login')}</a>
            </nav>
           <div className="flex items-center gap-2">
+            <LanguageSwitch />
             <Button variant="ghost" className="hidden md:inline-flex" asChild>
-              <a href="#how">Learn more</a>
+              <a href="#how">{t('learnMore')}</a>
             </Button>
             <Button variant="hero" size="lg" asChild>
-              <a href="/discover">Get started</a>
+              <a href="/discover">{t('getStarted')}</a>
             </Button>
           </div>
         </div>
@@ -46,22 +50,22 @@ const Index = () => {
           <div className="container mx-auto grid md:grid-cols-2 gap-10 items-center px-4 py-16 md:py-24">
             <div>
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
-                Meet musicians. Match fast. <span className="text-gradient-primary">Find your jam.</span>
+                {t('landingTitle')} <span className="text-gradient-primary">{t('findYourJam')}</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 max-w-prose">
-                FindmyJam connects you with nearby players by genre, instrument and skill level. Book sessions, build bands, and make music together.
+                {t('landingSubtitle')}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="hero" size="xl" asChild>
-                  <a href="/discover">Find my jam</a>
+                  <a href="/discover">{t('findMyJam')}</a>
                 </Button>
                 <Button variant="secondary" size="xl" asChild>
-                  <a href="#features">Explore features</a>
+                  <a href="#features">{t('exploreFeatures')}</a>
                 </Button>
               </div>
               <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="opacity-70" />
-                <span>Smart matching • Verified profiles • Session scheduling</span>
+                <span>{t('smartMatching')}</span>
               </div>
             </div>
             <div className="relative">
@@ -79,24 +83,24 @@ const Index = () => {
         <section id="features" className="py-16 md:py-24 border-t border-border/60">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-3">Features</h2>
-              <p className="text-muted-foreground">Designed to help you connect and play more.</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">{t('features')}</h2>
+              <p className="text-muted-foreground">{t('featuresSubtitle')}</p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
               <article className="rounded-xl border border-border bg-card p-6 shadow-elegant transition-all hover:-translate-y-1 hover:shadow-glow">
                 <Music2 className="mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Genre & instrument matching</h3>
-                <p className="text-muted-foreground">Filter by styles, instruments and proficiency to discover the right collaborators.</p>
+                <h3 className="font-semibold text-lg mb-2">{t('genreMatchingTitle')}</h3>
+                <p className="text-muted-foreground">{t('genreMatchingDesc')}</p>
               </article>
               <article className="rounded-xl border border-border bg-card p-6 shadow-elegant transition-all hover:-translate-y-1 hover:shadow-glow">
                 <Users className="mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Verified profiles</h3>
-                <p className="text-muted-foreground">Trustworthy musician profiles with media, influences and availability.</p>
+                <h3 className="font-semibold text-lg mb-2">{t('verifiedProfilesTitle')}</h3>
+                <p className="text-muted-foreground">{t('verifiedProfilesDesc')}</p>
               </article>
               <article className="rounded-xl border border-border bg-card p-6 shadow-elegant transition-all hover:-translate-y-1 hover:shadow-glow">
                 <CalendarDays className="mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Session scheduling</h3>
-                <p className="text-muted-foreground">Book rehearsal rooms or set up home jams with shared calendars and reminders.</p>
+                <h3 className="font-semibold text-lg mb-2">{t('sessionSchedulingTitle')}</h3>
+                <p className="text-muted-foreground">{t('sessionSchedulingDesc')}</p>
               </article>
             </div>
           </div>
@@ -105,19 +109,19 @@ const Index = () => {
         <section id="how" className="py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-2xl text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-3">How it works</h2>
-              <p className="text-muted-foreground">Three simple steps to your next jam session.</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">{t('howItWorks')}</h2>
+              <p className="text-muted-foreground">{t('howItWorksSubtitle')}</p>
             </div>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="rounded-xl border border-border bg-card p-6">
-                <div className="text-sm font-semibold text-primary mb-2">Step 1</div>
-                <h3 className="font-semibold mb-2">Create your profile</h3>
-                <p className="text-muted-foreground">Add instruments, genres, influences and availability.</p>
+                <div className="text-sm font-semibold text-primary mb-2">{t('step1')}</div>
+                <h3 className="font-semibold mb-2">{t('createProfileTitle')}</h3>
+                <p className="text-muted-foreground">{t('createProfileDesc')}</p>
               </div>
               <div className="rounded-xl border border-border bg-card p-6">
-                <div className="text-sm font-semibold text-primary mb-2">Step 2</div>
-                <h3 className="font-semibold mb-2">Get matched</h3>
-                <p className="text-muted-foreground">Our smart matching suggests compatible musicians nearby.</p>
+                <div className="text-sm font-semibold text-primary mb-2">{t('step2')}</div>
+                <h3 className="font-semibold mb-2">{t('getMatchedTitle')}</h3>
+                <p className="text-muted-foreground">{t('getMatchedDesc')}</p>
               </div>
               <div className="rounded-xl border border-border bg-card p-6">
                 <div className="text-sm font-semibold text-primary mb-2">Step 3</div>
@@ -127,7 +131,7 @@ const Index = () => {
             </div>
             <div id="get-started" className="mt-10 flex justify-center">
               <Button variant="hero" size="lg" asChild>
-                <a href="/discover">Start now</a>
+                <a href="/discover">{t('startNow')}</a>
               </Button>
             </div>
           </div>
@@ -135,18 +139,18 @@ const Index = () => {
 
         <section id="faq" className="py-16 md:py-24 border-t border-border/60">
           <div className="container mx-auto px-4 max-w-3xl">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">FAQs</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">{t('faq')}</h2>
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1">
-                <AccordionTrigger>Is FindmyJam free?</AccordionTrigger>
+                <AccordionTrigger>{t('freeQuestion')}</AccordionTrigger>
                 <AccordionContent>
-                  Yes, the core features are free while we experiment with upgrades for power users.
+                  {t('freeAnswer')}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-2">
-                <AccordionTrigger>Do I need to share my location?</AccordionTrigger>
+                <AccordionTrigger>{t('locationQuestion')}</AccordionTrigger>
                 <AccordionContent>
-                  Location helps you find nearby matches; you control visibility and can browse broadly.
+                  {t('locationAnswer')}
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="item-3">
@@ -162,11 +166,11 @@ const Index = () => {
 
       <footer className="border-t border-border/60 py-10">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} FindmyJam. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">{t('copyright', { year: new Date().getFullYear() })}</p>
           <nav className="flex items-center gap-6 text-sm">
-            <a href="#features" className="hover:text-primary transition-colors">Features</a>
-            <a href="#how" className="hover:text-primary transition-colors">How it works</a>
-            <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
+            <a href="#features" className="hover:text-primary transition-colors">{t('features')}</a>
+            <a href="#how" className="hover:text-primary transition-colors">{t('howItWorks')}</a>
+            <a href="#faq" className="hover:text-primary transition-colors">{t('faq')}</a>
           </nav>
         </div>
       </footer>
