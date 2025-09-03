@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Music2, Users, CalendarDays, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
+import { ConcertsSection } from "@/components/ConcertsSection";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -146,6 +147,16 @@ const Index = () => {
                 {t('startNow')}
               </Button>
             </div>
+          </div>
+        </section>
+
+        <section id="concerts" className="py-16 md:py-24 border-t border-border/60">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">{t('upcomingConcerts')}</h2>
+              <p className="text-muted-foreground">{t('concertsSubtitle')}</p>
+            </div>
+            <ConcertsSection />
           </div>
         </section>
 

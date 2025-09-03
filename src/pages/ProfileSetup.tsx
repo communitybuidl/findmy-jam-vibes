@@ -70,7 +70,7 @@ const ProfileSetup = () => {
       }
 
       // Try geolocation with different accuracy settings
-      const tryGetPosition = (highAccuracy = false) => {
+      const tryGetPosition = (highAccuracy = false): Promise<GeolocationPosition> => {
         return new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(
             resolve,

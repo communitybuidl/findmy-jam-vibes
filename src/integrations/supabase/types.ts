@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      concert_interests: {
+        Row: {
+          concert_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          concert_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          concert_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concert_interests_concert_id_fkey"
+            columns: ["concert_id"]
+            isOneToOne: false
+            referencedRelation: "concerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concerts: {
+        Row: {
+          artist: string
+          city: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          image_url: string | null
+          min_interested: number
+          title: string
+          venue: string | null
+        }
+        Insert: {
+          artist: string
+          city?: string | null
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          min_interested?: number
+          title: string
+          venue?: string | null
+        }
+        Update: {
+          artist?: string
+          city?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          min_interested?: number
+          title?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       connections: {
         Row: {
           created_at: string | null
