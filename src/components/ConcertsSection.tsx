@@ -21,9 +21,11 @@ export const ConcertsSection = () => {
   }
 
   if (error) {
+    console.error('ConcertsSection error:', error);
     return (
       <div className="text-center text-muted-foreground">
         <p>Unable to load concerts at the moment.</p>
+        <p className="text-sm mt-2 text-red-500">Error: {error.message}</p>
       </div>
     );
   }
