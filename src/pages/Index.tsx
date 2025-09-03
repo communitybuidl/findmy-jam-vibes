@@ -86,7 +86,7 @@ const Index = () => {
                 alt="Abstract vibrant music waveforms representing FindmyJam matching"
                 className="w-full rounded-xl border border-border shadow-elegant"
                 loading="eager"
-                fetchpriority="high"
+                fetchPriority="high"
               />
             </div>
           </div>
